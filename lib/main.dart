@@ -1,8 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+// import 'package:shelf/shelf.dart';
+// import 'package:shelf/shelf_io.dart' as shelf_io;
+import 'package:protofocus/log.dart';
 
 void main() {
-  runApp(const MyApp());
+   runApp(
+    ChangeNotifierProvider(
+      create: (context) => Log(),
+      child: const MyApp()
+    )
+  );
 }
+
+// void startServer() async {
+//   var handler =
+//       const Pipeline().addMiddleware(logRequests()).addHandler(_echoRequest);
+
+//   var server = await shelf_io.serve(handler, 'localhost', 55667);
+
+//   // Enable content compression
+//   server.autoCompress = true;
+
+//   print('Serving at http://${server.address.host}:${server.port}');
+// }
+
+// Response _echoRequest(Request request) =>
+//     Response.ok('Request method ${request.method}, contentLength ${request.contentLength}, context ${request.context}, encoding ${request.encoding}, handlerPath ${request.handlerPath}, hashCode ${request.hashCode}, headers ${request.headers}, headersAll ${request.headersAll}, method ${request.method}, mimeType ${request.mimeType}, protocolVersion ${request.protocolVersion}, requestedUri ${request.requestedUri}, runtimeType ${request.runtimeType}, url "${request.url}"');
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -10,7 +34,16 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    var log = context.watch<Log>();
+    log.add('Building MyApp');
+
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (context) => MyAppState(),
+        ),
+      ],
+      child: MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
         // This is the theme of your application.
@@ -32,7 +65,18 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const MyHomePage(title: 'Flutter Demo Home Page'),
+    ),
     );
+     
+  }
+}
+
+class MyAppState extends ChangeNotifier {
+  int counter = 0;
+
+  void incrementCounter() {
+    counter++;
+    notifyListeners();
   }
 }
 
@@ -55,27 +99,137 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  int counter = 0;
+  var selectedIndex = 0;
 
-  void _incrementCounter() {
+  void incrementCounter() {
     setState(() {
       // This call to setState tells the Flutter framework that something has
       // changed in this State, which causes it to rerun the build method below
       // so that the display can reflect the updated values. If we changed
       // _counter without calling setState(), then the build method would not be
       // called again, and so nothing would appear to happen.
-      _counter++;
+      counter++;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
+    Widget page;
+    switch (selectedIndex) {
+      case 0:
+        page = CounterPage();
+      case 1:
+        page = LogMessagesPage();
+      default:
+        throw UnimplementedError('no widget for $selectedIndex');
+    }
+
+    return LayoutBuilder(builder: (context, constraints) {
+        return Scaffold(
+          body: Row(
+            children: [
+              SafeArea(
+                child: NavigationRail(
+                  extended: constraints.maxWidth >= 600,
+                  destinations: [
+                    const NavigationRailDestination(
+                      icon: Icon(Icons.home),
+                      label: const Text('Home'),
+                    ),
+                    const NavigationRailDestination(
+                      icon: const Icon(Icons.abc),
+                      label: const Text('Log messages'),
+                    ),
+                  ],
+                  selectedIndex: selectedIndex,
+                  onDestinationSelected: (value) {
+                    setState(() {
+                      selectedIndex = value;
+                    });
+                  },
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  child: page,
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+    );
+  }
+
+
+  // @override
+  // Widget build(BuildContext context) {
+  //   // This method is rerun every time setState is called, for instance as done
+  //   // by the _incrementCounter method above.
+  //   //
+  //   // The Flutter framework has been optimized to make rerunning build methods
+  //   // fast, so that you can just rebuild anything that needs updating rather
+  //   // than having to individually change instances of widgets.
+  //   return Scaffold(
+  //     appBar: AppBar(
+  //       // TRY THIS: Try changing the color here to a specific color (to
+  //       // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
+  //       // change color while the other colors stay the same.
+  //       backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+  //       // Here we take the value from the MyHomePage object that was created by
+  //       // the App.build method, and use it to set our appbar title.
+  //       title: Text(widget.title),
+  //     ),
+  //     body: Center(
+  //       // Center is a layout widget. It takes a single child and positions it
+  //       // in the middle of the parent.
+  //       child: Column(
+  //         // Column is also a layout widget. It takes a list of children and
+  //         // arranges them vertically. By default, it sizes itself to fit its
+  //         // children horizontally, and tries to be as tall as its parent.
+  //         //
+  //         // Column has various properties to control how it sizes itself and
+  //         // how it positions its children. Here we use mainAxisAlignment to
+  //         // center the children vertically; the main axis here is the vertical
+  //         // axis because Columns are vertical (the cross axis would be
+  //         // horizontal).
+  //         //
+  //         // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
+  //         // action in the IDE, or press "p" in the console), to see the
+  //         // wireframe for each widget.
+  //         mainAxisAlignment: MainAxisAlignment.center,
+  //         children: <Widget>[
+  //           const Text(
+  //             'You have pushed the button this many times:',
+  //           ),
+  //           Text(
+  //             '$_counter',
+  //             style: Theme.of(context).textTheme.headlineMedium,
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //     floatingActionButton: FloatingActionButton(
+  //       onPressed: _incrementCounter,
+  //       tooltip: 'Increment',
+  //       child: const Icon(Icons.add),
+  //     ), // This trailing comma makes auto-formatting nicer for build methods.
+  //   );
+  // }
+}
+
+class CounterPage extends StatelessWidget {
+  const CounterPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    var appState = context.watch<MyAppState>();
+
+    var log = context.watch<Log>();
+    log.add('Starting app with Log');
+
     return Scaffold(
       appBar: AppBar(
         // TRY THIS: Try changing the color here to a specific color (to
@@ -84,7 +238,7 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         // Here we take the value from the MyHomePage object that was created by
         // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: const Text("widget.title"),
       ),
       body: Center(
         // Center is a layout widget. It takes a single child and positions it
@@ -109,17 +263,42 @@ class _MyHomePageState extends State<MyHomePage> {
               'You have pushed the button this many times:',
             ),
             Text(
-              '$_counter',
+              '${appState.counter}',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
+        onPressed: appState.incrementCounter,
         tooltip: 'Increment',
         child: const Icon(Icons.add),
       ), // This trailing comma makes auto-formatting nicer for build methods.
+    );
+  }
+}
+
+class LogMessagesPage extends StatelessWidget {
+  const LogMessagesPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    var log = context.watch<Log>();
+    log.add('bulding LogMessagePage');
+
+    if(log.isEmpty()) {
+      return const Center(
+        child: Text('No log messages:')        
+      );
+    }
+    
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [
+        const Text('Log messages:'),
+        for (var log in log.messages)
+          Text('${log.timestamp.toString()} - ${log.message}'),
+      ]      
     );
   }
 }
